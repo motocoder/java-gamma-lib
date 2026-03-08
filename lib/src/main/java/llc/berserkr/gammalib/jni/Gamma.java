@@ -32,6 +32,7 @@ public class Gamma {
 
     public native float [] lowPassFilter(float[] normalized, float cutoff, float sampleRate);
 
+    public native float[] highPassFilter(float[] normalized, float v, float v1);
     public static class ProcessResult {
 
     }

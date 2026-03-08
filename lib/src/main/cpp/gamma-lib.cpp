@@ -167,7 +167,45 @@ Java_llc_berserkr_gammalib_jni_Gamma_lowPassFilter(
 
     // 2. Initialize the Biquad filter as a LOW_PASS
     // Parameters: Frequency, Resonance (Q=0.707 is flat/Butterworth), Type
-    gam::Biquad<float> lpFilter(cutoffFreq, 0.51763809F , gam::LOW_PASS);
+    gam::Biquad<float> lpFilter(cutoffFreq, 0.707 , gam::LOW_PASS);
+
+    // Associate the filter with our local domain
+    lpFilter.domain(domain);
+
+    // 2. Iterate and process
+    for (int i = 0; i < length; ++i) {
+        // Elements are modified in place
+        elements[i] = lpFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+
+    env->SetFloatArrayRegion(result, 0, length, elements);
+
+    // 3. Release and commit changes back to the Java array (0 means commit + free)
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_highPassFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat cutoffFreq,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    // 1. Create a local domain to set the sample rate for the filter
+    gam::Domain domain(sampleRate);
+
+    // 2. Initialize the Biquad filter as a LOW_PASS
+    // Parameters: Frequency, Resonance (Q=0.707 is flat/Butterworth), Type
+    gam::Biquad<float> lpFilter(cutoffFreq, 0.707 , gam::HIGH_PASS);
 
     // Associate the filter with our local domain
     lpFilter.domain(domain);
