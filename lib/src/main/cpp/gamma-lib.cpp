@@ -6,6 +6,7 @@ extern "C" {
 #include "berserkr_plus.hpp"
 #include <android/log.h>
 #include "Analysis.h"
+#include "Filter.h"
 #include "Effects.h"
 #include <cmath>
 using namespace gam;
@@ -221,6 +222,651 @@ Java_llc_berserkr_gammalib_jni_Gamma_highPassFilter(
     env->SetFloatArrayRegion(result, 0, length, elements);
 
     // 3. Release and commit changes back to the Java array (0 means commit + free)
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+// --- Group 1A: Biquad filters without level parameter ---
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_bandPassFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat centerFrequency,
+    jfloat resonance,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as BAND_PASS
+    // Parameters: Frequency, Resonance (Q), Type
+    gam::Biquad<float> bpFilter(centerFrequency, resonance, gam::BAND_PASS);
+    bpFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = bpFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_resonantFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat centerFrequency,
+    jfloat resonance,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as RESONANT
+    // Like band-pass but with constant skirt gain — peak gain equals Q
+    gam::Biquad<float> resFilter(centerFrequency, resonance, gam::RESONANT);
+    resFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = resFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_bandRejectFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat centerFrequency,
+    jfloat resonance,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as BAND_REJECT (notch)
+    // Removes frequencies near centerFrequency, passes everything else
+    gam::Biquad<float> brFilter(centerFrequency, resonance, gam::BAND_REJECT);
+    brFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = brFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_allPassBiquadFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat centerFrequency,
+    jfloat resonance,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as ALL_PASS
+    // Passes all frequencies at equal amplitude but shifts their phase
+    gam::Biquad<float> apFilter(centerFrequency, resonance, gam::ALL_PASS);
+    apFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = apFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+// --- Group 1B: Biquad filters with level parameter ---
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_peakingFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat resonance,
+    jfloat level,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as PEAKING (parametric EQ)
+    // The level parameter controls boost/cut amount (linear amplitude)
+    gam::Biquad<float> pkFilter(frequency, resonance, gam::PEAKING, level);
+    pkFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = pkFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_lowShelfFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat resonance,
+    jfloat level,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as LOW_SHELF
+    // Boosts or cuts all frequencies below the shelf frequency
+    gam::Biquad<float> lsFilter(frequency, resonance, gam::LOW_SHELF, level);
+    lsFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = lsFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_highShelfFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat resonance,
+    jfloat level,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Initialize the Biquad filter as HIGH_SHELF
+    // Boosts or cuts all frequencies above the shelf frequency
+    gam::Biquad<float> hsFilter(frequency, resonance, gam::HIGH_SHELF, level);
+    hsFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = hsFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+// --- Group 2: Standalone filter classes ---
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_onePoleLowPassFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat cutoffFrequency,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Single-pole IIR filter — 6 dB/octave slope, much gentler than Biquad
+    gam::OnePole<float> opFilter(cutoffFrequency, gam::LOW_PASS);
+    opFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = opFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_onePoleHighPassFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat cutoffFrequency,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Single-pole IIR high-pass filter — 6 dB/octave slope
+    gam::OnePole<float> opFilter(cutoffFrequency, gam::HIGH_PASS);
+    opFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = opFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_allPass1Filter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // First-order all-pass — shifts phase from 0 to -180°, with -90° at frequency
+    gam::AllPass1<float> ap1Filter(frequency);
+    ap1Filter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = ap1Filter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_allPass2Filter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat bandwidth,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Second-order all-pass — shifts phase from 0 to -360°
+    gam::AllPass2<float> ap2Filter(frequency, bandwidth);
+    ap2Filter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = ap2Filter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_blockDCFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat bandwidth,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Removes DC offset (0 Hz component) — specialized high-pass with very low cutoff
+    gam::BlockDC<float> dcFilter(bandwidth);
+    dcFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = dcFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_blockNyquistFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat bandwidth,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Removes Nyquist frequency component — specialized low-pass at the top of the spectrum
+    gam::BlockNyq<float> nyqFilter(bandwidth);
+    nyqFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = nyqFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_notchFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat bandwidth,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Two-zero notch filter — completely eliminates a specific frequency
+    // Uses zeros only (no feedback poles), different from Biquad BAND_REJECT
+    gam::Notch<float> ntchFilter(frequency, bandwidth);
+    ntchFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = ntchFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_resonatorFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency,
+    jfloat bandwidth,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Two-pole resonator — strongly amplifies frequencies near center frequency
+    gam::Reson<float> resonFilter(frequency, bandwidth);
+    resonFilter.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = resonFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_movingAverageFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jint windowSize
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    // FIR moving average — no domain needed, operates purely on sample values
+    // Cutoff frequency is approximately sampleRate / windowSize
+    gam::MovingAvg<float> maFilter(windowSize);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = maFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_differencerFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    // Returns the difference between current and previous sample
+    // Acts as a high-pass filter with a zero at DC — no parameters needed
+    gam::Differencer<float> diffFilter;
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = diffFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_integratorFilter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat leakCoefficient
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    // Accumulates input values with a leak coefficient
+    // Without leak, sums indefinitely; with leak, acts as a simple low-pass
+    gam::Integrator<float> intFilter(leakCoefficient);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = intFilter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+// --- Group 3: Effects ---
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_chorusEffect(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat delay,
+    jfloat depth,
+    jfloat modulationFrequency,
+    jfloat feedforward,
+    jfloat feedback,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Dual delay-line chorus driven by a quadrature sinusoid modulator
+    // Parameters: delay interval, modulation depth, modulation frequency, feedforward, feedback
+    gam::Chorus<float> chorus(delay, depth, modulationFrequency, feedforward, feedback);
+
+    // Associate internal comb filters with our domain
+    chorus.comb1.domain(domain);
+    chorus.comb2.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = chorus(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_quantizerEffect(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat quantizationFrequency,
+    jfloat amplitudeStep,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Bitcrusher/downsampler — reduces sample rate and/or bit depth
+    gam::Quantizer<float> quantizer(quantizationFrequency, amplitudeStep);
+    quantizer.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = quantizer(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
+    env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
+
+    return result;
+}
+
+extern "C"
+JNIEXPORT jfloatArray JNICALL
+Java_llc_berserkr_gammalib_jni_Gamma_biquad3Filter(
+    JNIEnv *env,
+    jobject thiz,
+    jfloatArray recorded,
+    jfloat frequency0,
+    jfloat frequency1,
+    jfloat frequency2,
+    jfloat resonance,
+    jfloat sampleRate
+) {
+    const jsize length = env->GetArrayLength(recorded);
+    jfloat *elements = env->GetFloatArrayElements(recorded, nullptr);
+
+    gam::Domain domain(sampleRate);
+
+    // Three Biquad band-pass filters summed in parallel
+    // Biquad3 is not a template — it uses Biquad<> (default float) internally
+    gam::Biquad3 bq3Filter(frequency0, frequency1, frequency2, resonance, gam::BAND_PASS);
+
+    // Each internal biquad needs its domain set individually
+    bq3Filter.bq0.domain(domain);
+    bq3Filter.bq1.domain(domain);
+    bq3Filter.bq2.domain(domain);
+
+    for (int i = 0; i < length; ++i) {
+        elements[i] = bq3Filter(elements[i]);
+    }
+
+    jfloatArray result = env->NewFloatArray(length);
+    env->SetFloatArrayRegion(result, 0, length, elements);
     env->ReleaseFloatArrayElements(recorded, elements, JNI_ABORT);
 
     return result;
