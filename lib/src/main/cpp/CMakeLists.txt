@@ -17,10 +17,12 @@ project(gamma_lib LANGUAGES C CXX)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/deps/gamma)
 add_subdirectory(${CMAKE_SOURCE_DIR}/deps/berserkrlib)
+add_subdirectory(${CMAKE_SOURCE_DIR}/examples/algorithmic)
 
 ## Fetch all source files for your project (recursively), excluding 'deps' source files
 file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/*.c" "${CMAKE_SOURCE_DIR}/*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_SOURCE_DIR}/deps/.*")
+list(FILTER SOURCES EXCLUDE REGEX "${CMAKE_SOURCE_DIR}/examples/algorithmic/.*")
 
 # Add headers directory for android_native_app_glue.c
 include_directories(${ANDROID_NDK}/sources/android/native_app_glue/)
@@ -41,6 +43,7 @@ endif()
 
 target_include_directories(gamma_lib PRIVATE "${CMAKE_SOURCE_DIR}/deps/gamma")
 target_include_directories(gamma_lib PRIVATE "${CMAKE_SOURCE_DIR}/deps/berserkrlib")
+target_include_directories(gamma_lib PRIVATE "${CMAKE_SOURCE_DIR}/deps/examples/algorithmic")
 
 target_link_options(gamma_lib PRIVATE "-Wl,-z,max-page-size=16384")
 
@@ -53,4 +56,5 @@ target_link_libraries(gamma_lib PUBLIC
         log
         berserkrlib
         gamma
+        gamma_examples_algorithmic
 )

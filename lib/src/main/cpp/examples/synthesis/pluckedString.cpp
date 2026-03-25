@@ -1,0 +1,76 @@
+/*	Gamma - Generic processing library
+	See COPYRIGHT file for authors and license information
+	
+Example:	Plucked String
+Author:		Lance Putnam, 2012
+
+Description:
+Simulation of a plucked string using noise and a feedback delay-line.
+*/
+
+//#include "../AudioApp.h"
+#include "Delay.h"
+#include "Envelope.h"
+#include "Filter.h"
+#include "Noise.h"
+#include "Oscillator.h"
+using namespace gam;
+
+
+class PluckedString{
+public:
+	PluckedString(float frq=440)
+	:	env(0.1), fil(2), delay(1./27.5, 1./frq){}
+
+	float operator()(){
+		return (*this)(noise()*env());
+	}
+
+	float operator()(float in){
+		return delay(
+			fil( delay() + in )
+		);
+	}
+
+	void reset(){ env.reset(); }
+	void freq(float v){ delay.freq(v); }
+	
+	NoiseWhite<> noise;
+	Decay<> env;
+	MovingAvg<> fil;
+	Delay<float, ipl::Trunc> delay;
+};
+
+
+class MyApp { //: public AudioApp{
+public:
+
+	Accum<> tmr{1./0.1};
+	PluckedString
+		pluck1{static_cast<float>(scl::freq("d6"))},
+		pluck2{static_cast<float>(scl::freq("g5"))},
+		pluck3{static_cast<float>(scl::freq("a4"))},
+		pluck4{static_cast<float>(scl::freq("d3"))};
+
+	void onAudio() {//AudioIOData& io){
+
+//		while(io()){
+
+			if(tmr()){
+				if(rnd::prob(0.1/1)) pluck1.reset();
+				if(rnd::prob(0.1/2)) pluck2.reset();
+				if(rnd::prob(0.1/3)) pluck3.reset();
+				if(rnd::prob(0.1/4)) pluck4.reset();
+			}
+			
+			float s = pluck1() + pluck2() + pluck3() + pluck4();
+				
+//			io.out(0) = io.out(1) = s * 0.2f;
+//		}
+	}
+};
+
+//int main(){
+//	MyApp().onAudio();//.start();
+//}
+

@@ -477,7 +477,7 @@ public class GammaTest {
 
         playThread.start();
 
-        Thread.sleep(30_000);
+        Thread.sleep(5_000);
 
     }
 
