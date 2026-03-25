@@ -3,7 +3,7 @@
 # For more examples on how to use CMake, see https://github.com/android/ndk-samples.
 
 # Sets the minimum CMake version required for this project.
-cmake_minimum_required(VERSION 4.3.0)
+cmake_minimum_required(VERSION 4.2.1)
 
 # Set standards for C and C++
 set(CMAKE_C_STANDARD 99)
