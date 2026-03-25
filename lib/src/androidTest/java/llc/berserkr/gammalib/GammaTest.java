@@ -259,7 +259,7 @@ public class GammaTest {
         logger.debug("normalized max " + max);
         logger.debug("normalized min " + min);
 
-        assertTrue(gamma.detectNoise(normalized, 0.2F));
+        assertTrue(gamma.detectNoise(normalized, 0.01F));
 
     }
 
@@ -349,58 +349,6 @@ public class GammaTest {
         audioTrack.release();
 
     }
-
-//    @Test //TODO this doesn't work (Ai generated stuff)
-//    public void createPCMTest() throws IOException, InterruptedException {
-//
-//        final Context context = InstrumentationRegistry.getInstrumentation().getContext();
-//
-//        // 2. Setup paths for conversion in the app's cache directory
-//        File cacheDir = context.getCacheDir();
-//        File mp3File = new File(cacheDir, "temp.mp3");
-//        File pcmFile = new File(cacheDir, "retro_westerwald.pcm");
-//        File convertedMp3File = new File(cacheDir, "retro_westerwald_converted.mp3");
-//
-//        // Copy asset to a file so MediaExtractor can use a path (some APIs require it)
-//        try (InputStream is = context.getAssets().open("retro_westerwald.mp3");
-//             FileOutputStream os = new FileOutputStream(mp3File)) {
-//            StreamUtil.copyTo(is, os);
-//        }
-//
-//        // 3. Perform conversions
-//        MP3ToPCMConverter.convertTo24PCM(mp3File.getPath(), pcmFile.getPath());
-//        MP3ToPCMConverter.convert24PCMToMP3(pcmFile.getPath(), convertedMp3File.getPath(), 96_000, 1);
-//
-//        logger.info("PCM conversion complete at: " + pcmFile.getAbsolutePath());
-//        logger.info("Converted MP3 complete at: " + convertedMp3File.getAbsolutePath());
-//
-//        {
-//            // 1. Play original MP3 from assets using MediaPlayer
-//            final MediaPlayer mediaPlayer = new MediaPlayer();
-//            try (AssetFileDescriptor afd = context.getAssets().openFd("retro_westerwald.mp3")) {
-//                mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-//                mediaPlayer.prepare();
-//                mediaPlayer.start();
-//                logger.info("Playing original MP3...");
-//                Thread.sleep(3000); // Play for 3 seconds
-//                mediaPlayer.stop();
-//                mediaPlayer.release();
-//            }
-//        }
-//
-//        {
-//            // 1. Play converted MP3 from file using MediaPlayer
-//            final MediaPlayer mediaPlayer = new MediaPlayer();
-//            mediaPlayer.setDataSource(convertedMp3File.getPath());
-//            mediaPlayer.prepare();
-//            mediaPlayer.start();
-//            logger.info("Playing original MP3...");
-//            Thread.sleep(3000); // Play for 3 seconds
-//            mediaPlayer.stop();
-//            mediaPlayer.release();
-//
-//        }
-//    }
 
     private static final String PCM_FILE_NAME = "retro_westerwald_filtered.pcm";
 
