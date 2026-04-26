@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    `maven-publish`
 }
 
 android {
@@ -60,11 +61,31 @@ android {
         targetCompatibility = JavaVersion.VERSION_18
     }
 
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+
     // Link to your CMakeLists.txt
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
             version = "4.2.1"
+        }
+    }
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "llc.berserkr"
+            artifactId = "gammalib"
+            version = "1.0.0"
+
+            afterEvaluate {
+                from(components["release"])
+            }
         }
     }
 }
@@ -76,6 +97,8 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation(libs.espresso.core)
+    androidTestImplementation("com.alphacephei:vosk-android:0.3.75")
+    androidTestImplementation("net.java.dev.jna:jna:5.18.1@aar")
 
     implementation("org.slf4j:slf4j-api:2.0.17")
 
