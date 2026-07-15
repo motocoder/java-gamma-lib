@@ -81,7 +81,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "llc.berserkr"
             artifactId = "gammalib"
-            version = "1.0.0"
+            version = project.version.toString()
 
             afterEvaluate {
                 from(components["release"])
